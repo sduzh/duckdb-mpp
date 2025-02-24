@@ -1,0 +1,31 @@
+# name: test/sql/mpp_transaction.test
+# description: test mpp transaction
+# group: [mpp]
+
+# Require statement will ensure this test is run with this extension loaded
+require mpp
+
+statement ok
+ATTACH 'memory' AS mpp_memory (TYPE MPP, ENDPOINT "127.0.0.1:60000");
+
+statement ok
+USE mpp_memory;
+
+statement ok
+BEGIN;
+
+statement ok
+CREATE TABLE t0(c0 INT) PARTITION BY (c0) WITH BUCKETS 4;
+
+statement ok
+ROLLBACK;
+
+query I
+SHOW TABLES;
+----
+
+statement ok
+USE memory;
+
+statement ok
+DETACH mpp_memory;

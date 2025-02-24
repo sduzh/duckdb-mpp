@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    "grpc"
+  ],
+  "builtin-baseline": "d4ab44b499fb18f6f006016019d8718030f393ab",
+  "overrides": [
+    {
+      "name": "grpc",
+      "version": "1.51.1"
+    }
+  ]
+}

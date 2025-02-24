@@ -1,0 +1,66 @@
+# name: test/sql/mpp_filter.test
+# description: test filters on mpp table
+# group: [mpp]
+
+# Require statement will ensure this test is run with this extension loaded
+require mpp
+
+statement ok
+ATTACH 'memory' as mpp_memory (TYPE mpp, ENDPOINT '127.0.0.1:34567');
+
+statement ok
+USE mpp_memory;
+
+statement ok
+CREATE TABLE t0(id INT, name TEXT) PARTITION BY (id) WITH BUCKETS 12;
+
+statement ok
+INSERT INTO t0 VALUES(-2, 'apple'), (-1, 'banana'), (NULL, 'pear'), (0, NULL), (1, 'watermelon'), (2, 'grape');
+
+query II
+SELECT name, id FROM t0 WHERE abs(id)=1 ORDER BY name;
+----
+banana	-1
+watermelon	1
+
+query II
+SELECT id as c0, name as c1 FROM t0 WHERE c0=1 ORDER BY c0;
+----
+1	watermelon
+
+# Equal
+query II
+EXPLAIN SELECT id, name FROM t0 WHERE id=1;
+----
+physical_plan	<REGEX>:.*Shards: 1/12.*
+
+# Equal with column alias
+query II
+EXPLAIN SELECT id as c0, name as c1 FROM t0 WHERE c0=1;
+----
+physical_plan	<REGEX>:.*Shards: 1/12.*
+
+# IS NULL
+query II
+EXPLAIN SELECT id, name FROM t0 WHERE id IS NULL;
+----
+physical_plan	<REGEX>:.*Shards: 1/12.*
+
+# OR
+query II
+EXPLAIN SELECT id, name FROM t0 WHERE id IS NULL OR id=1;
+----
+physical_plan	<REGEX>:.*Shards: 2/12.*
+
+# IN
+query II
+EXPLAIN SELECT id, name FROM t0 WHERE id IN (1,2,3);
+----
+physical_plan	<REGEX>:.*Shards: 3/12.*
+
+statement ok
+USE memory;
+
+statement ok
+DETACH mpp_memory;
+

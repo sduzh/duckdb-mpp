@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package duckdb.proto;
+
+service MppService {
+    rpc Query (QueryRequest) returns (stream DataChunk);
+
+    rpc ShuffleRead (ShuffleReadRequest) returns (stream DataChunk);
+};
+
+message ShuffleReadRequest {
+    uint64 partition_id = 1;
+}
+
+message QueryRequest {
+    string statement = 1;
+};
+
+message Schema {
+    repeated bytes types = 1;
+    repeated string names = 2;
+}
+
+message DataChunk {
+    bytes chunk = 1;
+}
