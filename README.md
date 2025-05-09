@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sduzh/duckdb-mpp)
+
 # DuckDB-MPP: Distributed DuckDB
 
 This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
@@ -115,4 +117,5 @@ SELECT * FROM test;
 - [ ] Co-located tables
 - [ ] Reference tables
 - [ ] TPC-H
-- [ ] TPC-DS 
+- [ ] TPC-DS
+
