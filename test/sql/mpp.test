@@ -178,3 +178,9 @@ DETACH mpp_db1;
 
 statement ok
 DETACH mpp_db2;
+
+statement ok
+DETACH db1;
+
+statement ok
+DETACH db2;

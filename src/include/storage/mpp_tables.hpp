@@ -2,6 +2,8 @@
 
 #include "storage/mpp_system_table.hpp"
 
+#include "duckdb/storage/storage_index.hpp"
+
 namespace duckdb {
 
 class DistributedTableInfo;

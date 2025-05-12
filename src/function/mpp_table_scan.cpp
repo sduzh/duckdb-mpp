@@ -271,6 +271,8 @@ public:
 				output.Move(*data);
 				D_ASSERT(output.size() > 0);
 				return;
+			} else if (lstate.remote_result->HasError()) {
+				throw ExecutorException(lstate.remote_result->GetError());
 			}
 			lstate.remote_result = QueryNextShard();
 			if (!lstate.remote_result) {

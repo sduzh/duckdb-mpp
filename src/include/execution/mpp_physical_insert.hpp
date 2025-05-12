@@ -9,15 +9,14 @@ namespace duckdb {
 class MppShardInfo;
 class ShuffleManager;
 
-class PhysicalShuffleWrite final : public PhysicalOperator {
+class MppPhysicalInsert final : public PhysicalOperator {
 public:
-	explicit PhysicalShuffleWrite(vector<LogicalType> types, idx_t estimated_cardinality,
-	                              ShuffleManager &shuffle_manager, TableCatalogEntry &table,
-	                              physical_index_vector_t<idx_t> column_index_map,
-	                              vector<unique_ptr<Expression>> bound_defaults, unique_ptr<Expression> hash_expression,
-	                              vector<Endpoint> shard_locations, Endpoint local_endpoint);
+	explicit MppPhysicalInsert(vector<LogicalType> types, idx_t estimated_cardinality, ShuffleManager &shuffle_manager,
+	                           TableCatalogEntry &table, physical_index_vector_t<idx_t> column_index_map,
+	                           vector<unique_ptr<Expression>> bound_defaults, unique_ptr<Expression> hash_expression,
+	                           vector<Endpoint> shard_locations, Endpoint local_endpoint);
 
-	~PhysicalShuffleWrite() override;
+	~MppPhysicalInsert() override;
 
 public:
 	// Source interface
@@ -31,19 +30,10 @@ public:
 public:
 	// Sink interface
 
-	//! The sink method is called constantly with new input, as long as new input is available. Note that this method
-	//! CAN be called in parallel, proper locking is needed when accessing dat
-	//! a inside the GlobalSinkState.
 	SinkResultType Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const override;
 
-	//! The combine is called when a single thread has completed execution of its part of the pipeline, it is the final
-	//! time that a specific LocalSinkState is accessible. This method can be called in parallel while other Sink() or
-	//! Combine() calls are active on the same GlobalSinkState.
 	SinkCombineResultType Combine(ExecutionContext &context, OperatorSinkCombineInput &input) const override;
 
-	//! The finalize is called when ALL threads are finished execution. It is called only once per pipeline, and is
-	//! entirely single threaded.
-	//! If Finalize returns SinkResultType::Finished, the sink is marked as finished
 	SinkFinalizeType Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
 	                          OperatorSinkFinalizeInput &input) const override;
 

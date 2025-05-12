@@ -62,19 +62,23 @@ set(EXTENSION_SOURCES
     src/mpp_service.cpp
     src/mpp_server.cpp
     src/mpp_client.cpp
+    src/execution/mpp_physical_insert.cpp
+    src/execution/mpp_physical_update.cpp
+    src/execution/mpp_plan_delete.cpp
+    src/execution/mpp_plan_insert.cpp
+    src/execution/mpp_plan_update.cpp
     src/function/create_distributed_table.cpp
     src/function/master_add_node.cpp
     src/function/mpp_table_scan.cpp
     src/function/prune_shards.cpp
     src/function/remote_query.cpp
+    src/function/shuffle_read.cpp
     src/parser/mpp_parse_data.cpp
     src/parser/mpp_parser_extension.cpp
-    src/remote_query_result.cpp
     src/parser/partition_method.cpp
+    src/remote_query_result.cpp
     src/shuffle/simple_shuffle_manager.cpp
-    src/execution/physical_shuffle_write.cpp
     src/shuffle/shuffle_manager.cpp
-    src/function/shuffle_read.cpp
     src/storage/mpp_catalog.cpp
     src/storage/mpp_schema_entry.cpp
     src/storage/mpp_storage_extension.cpp

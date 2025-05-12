@@ -1,5 +1,6 @@
 #include "storage/mpp_table_entry.hpp"
 
+#include "common/distributed_table_info.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/parser/parsed_data/create_table_info.hpp"
@@ -7,8 +8,11 @@
 #include "function/mpp_table_scan.hpp"
 #include "storage/mpp_catalog.hpp"
 #include "storage/mpp_schema_entry.hpp"
+#include "storage/mpp_tables.hpp"
 
 namespace duckdb {
+
+MppTableEntry::~MppTableEntry() = default;
 
 unique_ptr<MppTableEntry> MppTableEntry::WrapDuckTable(MppCatalog &catalog, MppSchemaEntry &schema,
                                                        TableCatalogEntry &base) {
@@ -33,4 +37,9 @@ TableFunction MppTableEntry::GetScanFunction(ClientContext &context, unique_ptr<
 TableStorageInfo MppTableEntry::GetStorageInfo(ClientContext &context) {
 	return {};
 }
+
+void MppTableEntry::GetDistributedTableInfo(ClientContext &context, DistributedTableInfo &info) {
+	MppTables::Get(context).GetDistributedTableInfo(context, base_.oid, info);
+}
+
 } // namespace duckdb

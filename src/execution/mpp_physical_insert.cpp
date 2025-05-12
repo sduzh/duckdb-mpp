@@ -1,4 +1,4 @@
-#include "execution/physical_shuffle_write.hpp"
+#include "execution/mpp_physical_insert.hpp"
 #include "common/endpoint.hpp"
 #include "common/serializer.hpp"
 #include "duckdb/common/unordered_map.hpp"
@@ -76,12 +76,12 @@ struct LocalShuffleWriteState final : public LocalSinkState {
 	unordered_set<partition_id_t> opened_partitions;
 };
 
-PhysicalShuffleWrite::PhysicalShuffleWrite(vector<LogicalType> types, idx_t estimated_cardinality,
-                                           ShuffleManager &shuffle_manager, TableCatalogEntry &table,
-                                           physical_index_vector_t<idx_t> column_index_map,
-                                           vector<unique_ptr<Expression>> bound_defaults,
-                                           unique_ptr<Expression> hash_expression, vector<Endpoint> shard_locations,
-                                           Endpoint local_endpoint)
+MppPhysicalInsert::MppPhysicalInsert(vector<LogicalType> types, idx_t estimated_cardinality,
+                                     ShuffleManager &shuffle_manager, TableCatalogEntry &table,
+                                     physical_index_vector_t<idx_t> column_index_map,
+                                     vector<unique_ptr<Expression>> bound_defaults,
+                                     unique_ptr<Expression> hash_expression, vector<Endpoint> shard_locations,
+                                     Endpoint local_endpoint)
     : PhysicalOperator(PhysicalOperatorType::EXTENSION, std::move(types), estimated_cardinality),
       shuffle_manager(shuffle_manager), column_index_map(std::move(column_index_map)), insert_table(&table),
       insert_types(table.GetTypes()), bound_defaults(std::move(bound_defaults)),
@@ -90,19 +90,19 @@ PhysicalShuffleWrite::PhysicalShuffleWrite(vector<LogicalType> types, idx_t esti
 	first_partition_id = shuffle_manager.GetPartitionId(NumericCast<int32_t>(this->shard_locations.size()));
 }
 
-PhysicalShuffleWrite::~PhysicalShuffleWrite() = default;
+MppPhysicalInsert::~MppPhysicalInsert() = default;
 
-unique_ptr<GlobalSinkState> PhysicalShuffleWrite::GetGlobalSinkState(ClientContext &context) const {
+unique_ptr<GlobalSinkState> MppPhysicalInsert::GetGlobalSinkState(ClientContext &context) const {
 	return make_uniq<GlobalShuffleWriteState>(shuffle_manager, *insert_table, shard_locations, local_endpoint,
 	                                          first_partition_id);
 }
 
-unique_ptr<LocalSinkState> PhysicalShuffleWrite::GetLocalSinkState(ExecutionContext &context) const {
+unique_ptr<LocalSinkState> MppPhysicalInsert::GetLocalSinkState(ExecutionContext &context) const {
 	auto result = make_uniq<LocalShuffleWriteState>(context.client, insert_types, bound_defaults, *hash_expression);
 	return result;
 }
 
-SinkResultType PhysicalShuffleWrite::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
+SinkResultType MppPhysicalInsert::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
 	auto &gstate = input.global_state.Cast<GlobalShuffleWriteState>();
 	auto &lstate = input.local_state.Cast<LocalShuffleWriteState>();
 
@@ -147,9 +147,9 @@ SinkResultType PhysicalShuffleWrite::Sink(ExecutionContext &context, DataChunk &
 	return SinkResultType::NEED_MORE_INPUT;
 }
 
-void PhysicalShuffleWrite::ResolveDefaults(const TableCatalogEntry &table, DataChunk &chunk,
-                                           const physical_index_vector_t<idx_t> &column_index_map,
-                                           ExpressionExecutor &default_executor, DataChunk &result) {
+void MppPhysicalInsert::ResolveDefaults(const TableCatalogEntry &table, DataChunk &chunk,
+                                        const physical_index_vector_t<idx_t> &column_index_map,
+                                        ExpressionExecutor &default_executor, DataChunk &result) {
 	chunk.Flatten();
 	default_executor.SetChunk(chunk);
 
@@ -180,12 +180,12 @@ void PhysicalShuffleWrite::ResolveDefaults(const TableCatalogEntry &table, DataC
 	}
 }
 
-SinkCombineResultType PhysicalShuffleWrite::Combine(ExecutionContext &context, OperatorSinkCombineInput &input) const {
+SinkCombineResultType MppPhysicalInsert::Combine(ExecutionContext &context, OperatorSinkCombineInput &input) const {
 	return SinkCombineResultType::FINISHED;
 }
 
-SinkFinalizeType PhysicalShuffleWrite::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
-                                                OperatorSinkFinalizeInput &input) const {
+SinkFinalizeType MppPhysicalInsert::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
+                                             OperatorSinkFinalizeInput &input) const {
 	auto &gstate = input.global_state.Cast<GlobalShuffleWriteState>();
 	auto error = string {};
 	for (auto &[id, _] : gstate.remote_query_results) {
@@ -208,12 +208,12 @@ SinkFinalizeType PhysicalShuffleWrite::Finalize(Pipeline &pipeline, Event &event
 
 struct GlobalShuffleWriteSourceState : public GlobalSourceState {};
 
-unique_ptr<GlobalSourceState> PhysicalShuffleWrite::GetGlobalSourceState(ClientContext &context) const {
+unique_ptr<GlobalSourceState> MppPhysicalInsert::GetGlobalSourceState(ClientContext &context) const {
 	return make_uniq<GlobalShuffleWriteSourceState>();
 }
 
-SourceResultType PhysicalShuffleWrite::GetData(ExecutionContext &context, DataChunk &chunk,
-                                               OperatorSourceInput &input) const {
+SourceResultType MppPhysicalInsert::GetData(ExecutionContext &context, DataChunk &chunk,
+                                            OperatorSourceInput &input) const {
 	auto &insert_gstate = sink_state->Cast<GlobalShuffleWriteState>();
 	chunk.SetCardinality(1);
 	chunk.SetValue(0, 0, Value::BIGINT(NumericCast<int64_t>(insert_gstate.insert_count)));

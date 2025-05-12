@@ -1,0 +1,81 @@
+# name: test/sql/mpp_update.test
+# description: test mpp update statements
+# group: [mpp]
+
+require mpp
+
+statement ok
+ATTACH 'db11.db';
+
+statement ok
+ATTACH 'db12.db';
+
+statement ok
+ATTACH 'db13.db';
+
+statement ok
+ATTACH 'db11' AS mpp_db11 (TYPE MPP, ENDPOINT "127.0.0.1:12345");
+
+statement ok
+ATTACH 'db12' AS mpp_db12 (TYPE MPP, ENDPOINT "127.0.0.1:23456");
+
+statement ok
+ATTACH 'db13' AS mpp_db13 (TYPE MPP, ENDPOINT "127.0.0.1:34567");
+
+statement ok
+USE mpp_db11;
+
+statement ok
+SELECT * FROM master_add_node('127.0.0.1', 23456);
+
+statement ok
+SELECT * FROM master_add_node('127.0.0.1', 34567);
+
+statement ok
+CREATE TABLE test_update(create_date DATE, name TEXT) PARTITION BY(create_date) WITH BUCKETS 6;
+
+statement ok
+INSERT INTO test_update VALUES('2025-01-01', 'alex'), ('2025-01-02', 'jack'), ('2025-01-03', 'jason'), ('2025-01-04', 'tom');
+
+statement ok
+UPDATE test_update SET name='Alex' WHERE create_date='2025-01-01';
+
+query II
+SELECT create_date, name FROM test_update ORDER BY create_date;
+----
+2025-01-01	Alex
+2025-01-02	jack
+2025-01-03	jason
+2025-01-04	tom
+
+statement ok
+UPDATE test_update SET name=upper(name);
+
+query II
+SELECT create_date, name FROM test_update ORDER BY create_date;
+----
+2025-01-01	ALEX
+2025-01-02	JACK
+2025-01-03	JASON
+2025-01-04	TOM
+
+statement ok
+USE memory;
+
+statement ok
+DETACH mpp_db11;
+
+statement ok
+DETACH mpp_db12;
+
+statement ok
+DETACH mpp_db13;
+
+statement ok
+DETACH db11
+
+statement ok
+DETACH db12
+
+statement ok
+DETACH db13
