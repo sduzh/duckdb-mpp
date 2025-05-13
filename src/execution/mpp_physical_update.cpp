@@ -106,8 +106,8 @@ SourceResultType MppPhysicalUpdate::GetData(ExecutionContext &context, DataChunk
 			D_ASSERT(data->size() == 1);
 			auto updated_count = BigIntValue::Get(data->GetValue(0, 0));
 			if (gstate.FinishShard(updated_count)) {
-				chunk.SetValue(0, 0, Value::BIGINT(NumericCast<int64_t>(gstate.GetUpdatedCount())));
 				chunk.SetCardinality(1);
+				chunk.SetValue(0, 0, Value::BIGINT(NumericCast<int64_t>(gstate.GetUpdatedCount())));
 				return SourceResultType::HAVE_MORE_OUTPUT;
 			}
 		} else if (lstate.query_result->HasError()) {

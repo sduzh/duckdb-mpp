@@ -32,8 +32,8 @@ std::string MppExtension::Name() {
 }
 
 std::string MppExtension::Version() const {
-#ifdef EXT_VERSION_SWARM
-	return EXT_VERSION_SWARM;
+#ifdef EXT_VERSION_MPP
+	return EXT_VERSION_MPP;
 #else
 	return "";
 #endif

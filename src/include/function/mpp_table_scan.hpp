@@ -27,6 +27,8 @@ public:
 };
 
 struct MppTableScanFunction {
+	constexpr static const char *NAME = "mpp_seq_scan";
+
 	static TableFunction GetFunction();
 };
 } // namespace duckdb

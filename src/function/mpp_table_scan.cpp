@@ -372,7 +372,7 @@ static double MppTableScanProgress(ClientContext &context, const FunctionData *b
 }
 
 TableFunction MppTableScanFunction::GetFunction() {
-	TableFunction scan_function("mpp_seq_scan", {}, MppTableScanFunc);
+	TableFunction scan_function(NAME, {}, MppTableScanFunc);
 	scan_function.init_local = MppTableScanInitLocal;
 	scan_function.init_global = MppTableScanInitGlobal;
 	scan_function.statistics = MppTableScanStatistics;

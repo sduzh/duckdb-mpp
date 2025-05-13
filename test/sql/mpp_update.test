@@ -60,6 +60,17 @@ SELECT create_date, name FROM test_update ORDER BY create_date;
 2025-01-04	TOM
 
 statement ok
+UPDATE test_update SET name=DEFAULT, create_date=create_date+1 WHERE create_date>'2025-01-03';
+
+query II
+SELECT create_date, name FROM test_update ORDER BY create_date;
+----
+2025-01-01	ALEX
+2025-01-02	JACK
+2025-01-03	JASON
+2025-01-05	NULL
+
+statement ok
 USE memory;
 
 statement ok
