@@ -5,13 +5,13 @@
 require mpp
 
 statement ok
-ATTACH 'db11.db';
+ATTACH '__TEST_DIR__/db11.db';
 
 statement ok
-ATTACH 'db12.db';
+ATTACH '__TEST_DIR__/db12.db';
 
 statement ok
-ATTACH 'db13.db';
+ATTACH '__TEST_DIR__/db13.db';
 
 statement ok
 ATTACH 'db11' AS mpp_db11 (TYPE MPP, ENDPOINT "127.0.0.1:12345");

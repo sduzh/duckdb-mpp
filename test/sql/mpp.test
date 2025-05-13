@@ -12,10 +12,10 @@ Catalog Error: Table Function with name master_add_node does not exist!
 require mpp
 
 statement ok
-ATTACH 'db1.db';
+ATTACH '__TEST_DIR__/db1.db';
 
 statement ok
-ATTACH 'db2.db';
+ATTACH '__TEST_DIR__/db2.db';
 
 statement ok
 ATTACH 'db1' AS mpp_db1 (TYPE MPP, ENDPOINT "127.0.0.1:12345");
