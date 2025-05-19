@@ -1,4 +1,4 @@
-#include "execution/mpp_physical_update.hpp"
+#include "execution/mpp_physical_delete.hpp"
 
 #include "mpp_client.hpp"
 #include "remote_query_result.hpp"
@@ -7,21 +7,21 @@
 
 namespace duckdb {
 
-MppPhysicalUpdate::MppPhysicalUpdate(vector<LogicalType> types, idx_t estimated_cardinality, std::string query_pattern,
+MppPhysicalDelete::MppPhysicalDelete(vector<LogicalType> types, idx_t estimated_cardinality, std::string query_pattern,
                                      vector<MppShardInfo> shards, bool return_chunk)
     : PhysicalOperator(TYPE, std::move(types), estimated_cardinality), query_pattern(std::move(query_pattern)),
       shards(std::move(shards)), return_chunk(return_chunk) {
 }
 
-MppPhysicalUpdate::~MppPhysicalUpdate() = default;
+MppPhysicalDelete::~MppPhysicalDelete() = default;
 
 //===--------------------------------------------------------------------===//
 // Source
 //===--------------------------------------------------------------------===//
-class MppUpdateGlobalState : public GlobalSourceState {
+class MppDeleteGlobalState : public GlobalSourceState {
 public:
-	explicit MppUpdateGlobalState(const vector<MppShardInfo> &shards, bool return_chunk)
-	    : shards(shards), next_shard(0), updated_count(0), finished_shards(0) {
+	explicit MppDeleteGlobalState(const vector<MppShardInfo> &shards, bool return_chunk)
+	    : shards(shards), next_shard(0), deleted_count(0), finished_shards(0) {
 	}
 
 	idx_t MaxThreads() override {
@@ -40,46 +40,46 @@ public:
 
 	bool FinishShard(idx_t count) {
 		lock_guard l(lock);
-		updated_count += count;
+		deleted_count += count;
 		++finished_shards;
 		D_ASSERT(finished_shards <= shards.size());
 		return finished_shards == shards.size();
 	}
 
-	idx_t GetUpdatedCount() {
+	idx_t GetDeletedCount() {
 		lock_guard l(lock);
-		return updated_count;
+		return deleted_count;
 	}
 
 	mutex lock;
 	const vector<MppShardInfo> &shards;
 	idx_t next_shard;
-	idx_t updated_count;
+	idx_t deleted_count;
 	idx_t finished_shards;
 };
 
-class MppUpdateLocalState : public LocalSourceState {
+class MppDeleteLocalState : public LocalSourceState {
 public:
-	MppUpdateLocalState() {
+	MppDeleteLocalState() {
 	}
 
 	string query;
 	std::unique_ptr<RemoteQueryResult> query_result;
 };
 
-unique_ptr<GlobalSourceState> MppPhysicalUpdate::GetGlobalSourceState(ClientContext &context) const {
-	return make_uniq<MppUpdateGlobalState>(shards, return_chunk);
+unique_ptr<GlobalSourceState> MppPhysicalDelete::GetGlobalSourceState(ClientContext &context) const {
+	return make_uniq<MppDeleteGlobalState>(shards, return_chunk);
 }
 
-unique_ptr<LocalSourceState> MppPhysicalUpdate::GetLocalSourceState(ExecutionContext &context,
+unique_ptr<LocalSourceState> MppPhysicalDelete::GetLocalSourceState(ExecutionContext &context,
                                                                     GlobalSourceState &gstate) const {
-	return make_uniq<MppUpdateLocalState>();
+	return make_uniq<MppDeleteLocalState>();
 }
 
-SourceResultType MppPhysicalUpdate::GetData(ExecutionContext &context, DataChunk &chunk,
+SourceResultType MppPhysicalDelete::GetData(ExecutionContext &context, DataChunk &chunk,
                                             OperatorSourceInput &input) const {
-	auto &gstate = input.global_state.Cast<MppUpdateGlobalState>();
-	auto &lstate = input.local_state.Cast<MppUpdateLocalState>();
+	auto &gstate = input.global_state.Cast<MppDeleteGlobalState>();
+	auto &lstate = input.local_state.Cast<MppDeleteLocalState>();
 	do {
 		if (!lstate.query_result) {
 			MppShardInfo shard;
@@ -107,7 +107,7 @@ SourceResultType MppPhysicalUpdate::GetData(ExecutionContext &context, DataChunk
 			auto updated_count = BigIntValue::Get(data->GetValue(0, 0));
 			if (gstate.FinishShard(updated_count)) {
 				chunk.SetCardinality(1);
-				chunk.SetValue(0, 0, Value::BIGINT(NumericCast<int64_t>(gstate.GetUpdatedCount())));
+				chunk.SetValue(0, 0, Value::BIGINT(NumericCast<int64_t>(gstate.GetDeletedCount())));
 				return SourceResultType::HAVE_MORE_OUTPUT;
 			}
 		} else if (lstate.query_result->HasError()) {
@@ -118,9 +118,9 @@ SourceResultType MppPhysicalUpdate::GetData(ExecutionContext &context, DataChunk
 	} while (true);
 }
 
-InsertionOrderPreservingMap<string> MppPhysicalUpdate::ParamsToString() const {
+InsertionOrderPreservingMap<string> MppPhysicalDelete::ParamsToString() const {
 	auto params = InsertionOrderPreservingMap<string> {};
-	params["type"] = "MPP UPDATE";
+	params["type"] = "MPP DELETE";
 	params["shards"] = to_string(shards.size());
 	params["query"] = query_pattern;
 	return params;

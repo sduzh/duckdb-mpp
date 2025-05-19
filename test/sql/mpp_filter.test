@@ -18,6 +18,34 @@ statement ok
 INSERT INTO t0 VALUES(-2, 'apple'), (-1, 'banana'), (NULL, 'pear'), (0, NULL), (1, 'watermelon'), (2, 'grape');
 
 query II
+SELECT id, name FROM t0 WHERE id > -2 and id < 1 ORDER BY id;
+----
+-1	banana
+0	NULL
+
+query II
+SELECT id, name FROM t0 WHERE id >= -2 and id < 1 ORDER BY id;
+----
+-2	apple
+-1	banana
+0	NULL
+
+query II
+SELECT id, name FROM t0 WHERE id > -2 and id <= 1 ORDER BY id;
+----
+-1	banana
+0	NULL
+1	watermelon
+
+query II
+SELECT id, name FROM t0 WHERE id >= -2 and id <= 1 ORDER BY id;
+----
+-2	apple
+-1	banana
+0	NULL
+1	watermelon
+
+query II
 SELECT name, id FROM t0 WHERE abs(id)=1 ORDER BY name;
 ----
 banana	-1

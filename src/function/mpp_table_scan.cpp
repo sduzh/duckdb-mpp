@@ -6,6 +6,7 @@
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/execution/partition_info.hpp"
+#include "duckdb/planner/expression/bound_between_expression.hpp"
 #include "duckdb/planner/expression/bound_comparison_expression.hpp"
 #include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/planner/expression/bound_operator_expression.hpp"
@@ -306,16 +307,22 @@ static unique_ptr<GlobalTableFunctionState> MppTableScanInitGlobal(ClientContext
 	auto &mpp_table = bind_data.table.Cast<MppTableEntry>();
 	if (input.projection_ids.empty()) {
 		for (auto &col_idx : input.column_indexes) {
-			D_ASSERT(!col_idx.IsRowIdColumn()); // FIXME
-			auto &column = mpp_table.GetColumn(col_idx.ToLogical());
-			gstate->projection_names.push_back(column.GetName());
+			if (col_idx.IsRowIdColumn()) {
+				gstate->projection_names.push_back("rowid");
+			} else {
+				auto &column = mpp_table.GetColumn(col_idx.ToLogical());
+				gstate->projection_names.push_back(column.GetName());
+			}
 		}
 	} else {
 		for (auto id : input.projection_ids) {
 			auto &col_idx = input.column_indexes[id];
-			D_ASSERT(!col_idx.IsRowIdColumn()); // FIXME
-			auto &column = mpp_table.GetColumn(col_idx.ToLogical());
-			gstate->projection_names.push_back(column.GetName());
+			if (col_idx.IsRowIdColumn()) {
+				gstate->projection_names.push_back("rowid");
+			} else {
+				auto &column = mpp_table.GetColumn(col_idx.ToLogical());
+				gstate->projection_names.push_back(column.GetName());
+			}
 		}
 	}
 	return gstate;
@@ -348,6 +355,13 @@ static void PushFilter(ClientContext &context, LogicalGet &get, MppTableScanBind
 static void MppComplexFilterPushdown(ClientContext &context, LogicalGet &get, FunctionData *bind_data,
                                      vector<unique_ptr<Expression>> &filters) {
 	auto &data = bind_data->Cast<MppTableScanBindData>();
+	//! DuckDB will parse 'c > a and c < b' as BoundBetweenExpression with exclusive lower and upper, and
+	// BoundBetweenExpression::ToString() will be "c between(a and b)", which cannot be used as the where
+	// clause pushed to shards. So we rewrite BoundExpression as comparison expressions first before construct
+	// the where_clause.
+	for (auto &filter : filters) {
+		filter = RewriteExclusiveBetweenExpression(std::move(filter));
+	}
 	for (auto &filter : filters) {
 		PushFilter(context, get, data, filter);
 	}

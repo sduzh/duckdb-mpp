@@ -220,4 +220,9 @@ SourceResultType MppPhysicalInsert::GetData(ExecutionContext &context, DataChunk
 	return SourceResultType::FINISHED;
 }
 
+InsertionOrderPreservingMap<string> MppPhysicalInsert::ParamsToString() const {
+	auto params = InsertionOrderPreservingMap<string> {};
+	params["type"] = "MPP INSERT";
+	return params;
+}
 } // namespace duckdb

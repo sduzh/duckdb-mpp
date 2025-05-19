@@ -19,6 +19,9 @@ public:
 	~MppPhysicalInsert() override;
 
 public:
+	InsertionOrderPreservingMap<string> ParamsToString() const override;
+
+public:
 	// Source interface
 	unique_ptr<GlobalSourceState> GetGlobalSourceState(ClientContext &context) const override;
 	SourceResultType GetData(ExecutionContext &context, DataChunk &chunk, OperatorSourceInput &input) const override;

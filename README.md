@@ -105,11 +105,13 @@ SELECT * FROM test;
 - [x] Create table
 - [ ] Create table as 
 - [x] Drop table 
-- [x] Insert
-- [x] Select
-- [ ] Update
-- [ ] Delete
-- [ ] Alter table 
+- [x] INSERT
+- [x] SELECT
+- [x] UPDATE
+- [ ] UPDATE ... RETURNING
+- [x] DELETE
+- [ ] DELETE ... RETURNING
+- [ ] ALTER
 - [ ] Distributed transactions
 - [ ] Shard rebalancing
 - [ ] Global row id

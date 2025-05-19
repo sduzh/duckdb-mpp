@@ -2,7 +2,10 @@
 
 #include "duckdb/common/column_index.hpp"
 #include "duckdb/planner/expression.hpp"
+#include "duckdb/planner/expression/bound_between_expression.hpp"
 #include "duckdb/planner/expression/bound_columnref_expression.hpp"
+#include "duckdb/planner/expression/bound_comparison_expression.hpp"
+#include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/planner/expression/bound_constant_expression.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/planner/expression_iterator.hpp"
@@ -59,6 +62,37 @@ inline optional_ptr<const BoundConstantExpression> GetConstantExpression(const E
 	} else {
 		return {};
 	}
+}
+
+inline unique_ptr<Expression> RewriteExclusiveBetweenExpression(unique_ptr<Expression> expr) {
+	if (expr->GetExpressionType() != ExpressionType::COMPARE_BETWEEN) {
+		ExpressionIterator::EnumerateChildren(
+		    *expr, [&](unique_ptr<Expression> &child) { child = RewriteExclusiveBetweenExpression(std::move(child)); });
+		return expr;
+	}
+	auto &between = expr->Cast<BoundBetweenExpression>();
+	if (between.lower_inclusive && between.upper_inclusive) {
+		return expr;
+	}
+	unique_ptr<Expression> left;
+	unique_ptr<Expression> right;
+	if (between.lower_inclusive) {
+		left = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_GREATERTHANOREQUALTO, between.input->Copy(),
+		                                            std::move(between.lower));
+		right = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_LESSTHAN, between.input->Copy(),
+		                                             std::move(between.upper));
+	} else if (between.upper_inclusive) {
+		left = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_GREATERTHAN, between.input->Copy(),
+		                                            std::move(between.lower));
+		right = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_LESSTHANOREQUALTO, between.input->Copy(),
+		                                             std::move(between.upper));
+	} else {
+		left = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_GREATERTHAN, between.input->Copy(),
+		                                            std::move(between.lower));
+		right = make_uniq<BoundComparisonExpression>(ExpressionType::COMPARE_LESSTHAN, between.input->Copy(),
+		                                             std::move(between.upper));
+	}
+	return make_uniq<BoundConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(left), std::move(right));
 }
 
 } // namespace duckdb

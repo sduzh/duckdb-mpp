@@ -1,0 +1,116 @@
+# name: test/sql/mpp_update.test
+# description: test mpp delete statements
+# group: [mpp]
+
+require mpp
+
+statement ok
+ATTACH '__TEST_DIR__/db_test_delete1.db';
+
+statement ok
+ATTACH '__TEST_DIR__/db_test_delete2.db';
+
+statement ok
+ATTACH '__TEST_DIR__/db_test_delete3.db';
+
+statement ok
+ATTACH 'db_test_delete1' AS mpp_db1 (TYPE MPP, ENDPOINT "127.0.0.1:12345");
+
+statement ok
+ATTACH 'db_test_delete2' AS mpp_db2 (TYPE MPP, ENDPOINT "127.0.0.1:23456");
+
+statement ok
+ATTACH 'db_test_delete3' AS mpp_db3 (TYPE MPP, ENDPOINT "127.0.0.1:34567");
+
+statement ok
+USE mpp_db1;
+
+statement ok
+SELECT * FROM master_add_node('127.0.0.1', 23456);
+
+statement ok
+SELECT * FROM master_add_node('127.0.0.1', 34567);
+
+statement ok
+CREATE TABLE test_delete(create_date DATE, name TEXT) PARTITION BY(create_date) WITH BUCKETS 6;
+
+statement ok
+DELETE FROM test_delete;
+
+statement ok
+INSERT INTO test_delete VALUES('2025-01-01', 'alex'), ('2025-01-02', 'jack'), ('2025-01-03', 'jason'), ('2025-01-04', 'tom');
+
+statement ok
+DELETE FROM test_delete;
+
+query I
+SELECT count(1) FROM test_delete;
+----
+0
+
+statement ok
+INSERT INTO test_delete VALUES('2025-01-01', 'alex'), ('2025-01-02', 'jack'), ('2025-01-03', 'jason'), ('2025-01-04', 'tom');
+
+query II
+SELECT create_date, name FROM test_delete ORDER BY create_date;
+----
+2025-01-01	alex
+2025-01-02	jack
+2025-01-03	jason
+2025-01-04	tom
+
+statement ok
+DELETE FROM test_delete WHERE name='alex';
+
+query II
+SELECT create_date, name FROM test_delete ORDER BY create_date;
+----
+2025-01-02	jack
+2025-01-03	jason
+2025-01-04	tom
+
+statement ok
+DELETE FROM test_delete WHERE create_date='2025-01-03';
+
+query II
+SELECT create_date, name FROM test_delete ORDER BY create_date;
+----
+2025-01-02	jack
+2025-01-04	tom
+
+statement ok
+DELETE FROM test_delete WHERE create_date>'2025-01-01' and create_date<'2025-01-04';
+
+query II
+SELECT create_date, name FROM test_delete ORDER BY create_date;
+----
+2025-01-04	tom
+
+statement ok
+DELETE FROM test_delete WHERE upper(name)='TOM';
+
+query I
+SELECT count(1) FROM test_delete;
+----
+0
+
+statement ok
+USE memory;
+
+statement ok
+DETACH mpp_db1;
+
+statement ok
+DETACH mpp_db2;
+
+statement ok
+DETACH mpp_db3;
+
+statement ok
+DETACH db_test_delete1
+
+statement ok
+DETACH db_test_delete2
+
+statement ok
+DETACH db_test_delete3

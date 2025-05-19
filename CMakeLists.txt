@@ -62,6 +62,7 @@ set(EXTENSION_SOURCES
     src/mpp_service.cpp
     src/mpp_server.cpp
     src/mpp_client.cpp
+    src/execution/mpp_physical_delete.cpp
     src/execution/mpp_physical_insert.cpp
     src/execution/mpp_physical_update.cpp
     src/execution/mpp_plan_delete.cpp
